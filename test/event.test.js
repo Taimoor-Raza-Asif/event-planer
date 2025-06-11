@@ -1,7 +1,7 @@
 const request = require('supertest');
-const express = require('express');
 const app = require('../app');
 
+let server;
 let token;
 
 describe('Event Planner API', () => {
@@ -22,13 +22,16 @@ describe('Event Planner API', () => {
     },
   };
 
-  // Register test user
   beforeAll(async () => {
-    await request(app)
+    // Start the server (you can use any available port, e.g., 0 for ephemeral)
+    server = app.listen(0, () => console.log("Test server running"));
+
+    // Register and login
+    await request(server)
       .post('/api/auth/register')
       .send(testUser);
 
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/auth/login')
       .send({
         email: testUser.email,
@@ -38,8 +41,12 @@ describe('Event Planner API', () => {
     token = res.body.token;
   });
 
+  afterAll((done) => {
+    server.close(done);
+  });
+
   it('should create an event', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/events')
       .set('Authorization', `Bearer ${token}`)
       .send(testEvent);
@@ -50,7 +57,7 @@ describe('Event Planner API', () => {
   });
 
   it('should get events for user', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .get('/api/events')
       .set('Authorization', `Bearer ${token}`);
 
@@ -60,7 +67,7 @@ describe('Event Planner API', () => {
   });
 
   it('should filter events by category', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .get('/api/events?category=Meetings')
       .set('Authorization', `Bearer ${token}`);
 
